@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileReader, Drag & Drop, and Device APIs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #file-preview, #drag-preview {
+            margin-top: 20px;
+            max-width: 300px;
+            max-height: 300px;
+            border: 2px solid #ccc;
+            padding: 10px;
+        }
+        #drop-zone {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            color: #007bff;
+            margin-top: 20px;
+        }
+        #drop-zone.dragover {
+            background-color: #e0f7ff;
+        }
+        button {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>FileReader, Drag & Drop, and Device APIs</h1>
+
+<h2>1. Загрузка файлов (FileReader API)</h2>
+<input type="file" id="file-input">
+<div id="file-preview">Здесь будет отображено содержимое файла.</div>
+
+<h2>2. Drag and Drop</h2>
+<div id="drop-zone">Перетащите сюда файл для загрузки</div>
+<div id="drag-preview">Здесь будет отображено содержимое перетащенного файла.</div>
+
+<h2>3. Управление Устройствами</h2>
+<button id="get-location">Определить местоположение</button>
+<div id="location-output">Местоположение: </div>
+
+<button id="use-camera">Сделать фото с камеры</button>
+<video id="camera-preview" autoplay playsinline style="display:none;" width="300" height="300"></video>
+<canvas id="photo-canvas" style="display:none;"></canvas>
+
+<script>
+// FileReader API
+const fileInput = document.getElementById('file-input');
+const filePreview = document.getElementById('file-preview');
+
+fileInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (file.type.startsWith('image/')) {
+                filePreview.innerHTML = `<img src="${e.target.result}" alt="File Preview" style="max-width:100%; max-height:100%;">`;
+            } else {
+                filePreview.textContent = e.target.result;
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Drag and Drop API
+const dropZone = document.getElementById('drop-zone');
+const dragPreview = document.getElementById('drag-preview');
+
+dropZone.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (event) => {
+    event.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = event.dataTransfer.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (file.type.startsWith('image/')) {
+                dragPreview.innerHTML = `<img src="${e.target.result}" alt="Dragged File Preview" style="max-width:100%; max-height:100%;">`;
+            } else {
+                dragPreview.textContent = e.target.result;
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Geolocation API
+const getLocationBtn = document.getElementById('get-location');
+const locationOutput = document.getElementById('location-output');
+
+getLocationBtn.addEventListener('click', () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                locationOutput.textContent = `Местоположение: Широта ${latitude}, Долгота ${longitude}`;
+            },
+            (error) => {
+                locationOutput.textContent = `Ошибка при определении местоположения: ${error.message}`;
+            }
+        );
+    } else {
+        locationOutput.textContent = 'Geolocation не поддерживается вашим браузером.';
+    }
+});
+
+// Media Devices API (Camera)
+const useCameraBtn = document.getElementById('use-camera');
+const cameraPreview = document.getElementById('camera-preview');
+const photoCanvas = document.getElementById('photo-canvas');
+
+useCameraBtn.addEventListener('click', async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        cameraPreview.style.display = 'block';
+        cameraPreview.srcObject = stream;
+
+        useCameraBtn.textContent = 'Сделать фото';
+        useCameraBtn.onclick = () => {
+            const context = photoCanvas.getContext('2d');
+            photoCanvas.width = cameraPreview.videoWidth;
+            photoCanvas.height = cameraPreview.videoHeight;
+            context.drawImage(cameraPreview, 0, 0);
+            photoCanvas.style.display = 'block';
+            cameraPreview.style.display = 'none';
+
+            // Stop video stream
+            stream.getTracks().forEach((track) => track.stop());
+        };
+    } catch (error) {
+        alert('Ошибка доступа к камере: ' + error.message);
+    }
+});
+</script>
+
+</body>
+</html>
